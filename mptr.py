@@ -26,12 +26,10 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 # OTHER DEALINGS IN THE SOFTWARE.
 
-from __future__ import print_function, unicode_literals
 from lxml import etree
-from urlparse import urljoin
+from urllib.parse import urljoin
 from operator import attrgetter
 from datetime import datetime
-from itertools import imap, ifilter
 from collections import namedtuple
 import requests
 
@@ -80,7 +78,7 @@ def track_item_iter(number):
     (form,) = tree.xpath('//form[@name="nyomkoveto"]')
 
     data = {a['name']: a.get('value', '') for a in
-            imap(attrgetter('attrib'), form.xpath('.//input'))}
+            map(attrgetter('attrib'), form.xpath('.//input'))}
 
     for row in STATIC_VALUES.split('\n'):
         key, value = row.strip().split(':', 1)
@@ -93,11 +91,10 @@ def track_item_iter(number):
     tree = etree.fromstring(resp.content, HTML_PARSER)
 
     for row in tree.xpath('//table')[0].xpath('tbody/tr'):
-        timestamp = datetime.strptime(''.join(ifilter(None, imap(unicode.strip, imap(unicode,
-            row.xpath('td[@class="date"]//text()'))))), '%Y.%m.%d%H:%M')
+        timestamp = datetime.strptime(''.join(filter(None, map(str.strip, row.xpath('td[@class="date"]//text()')))), '%Y.%m.%d%H:%M')
         (place_td,) = row.xpath('td[@class="place"]')
         (place,) = place_td.xpath('span/text()') or ['N/A']
-        info = ''.join(ifilter(None, imap(unicode.strip, imap(unicode, place_td.xpath('p//text()')))))
+        info = ''.join(filter(None, map(str.strip, place_td.xpath('p//text()'))))
         yield TRACK_ENTRY(timestamp=timestamp, place=place, info=info)
 
 
