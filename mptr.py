@@ -58,48 +58,48 @@ ice.submit.serialization:form
 javax.faces.partial.ajax:true"""
 
 def main():
-	from sys import argv, stderr
-	try:
-		number = argv[1]
-	except IndexError:
-		print('Usage: {0} <tracking number>'.format(argv[0]), file=stderr)
-		raise SystemExit(1)
-	else:
-		for entry in track_item_iter(number):
-			print('\t'.join((entry.timestamp.isoformat(), entry.place, entry.info)))
+    from sys import argv, stderr
+    try:
+        number = argv[1]
+    except IndexError:
+        print('Usage: {0} <tracking number>'.format(argv[0]), file=stderr)
+        raise SystemExit(1)
+    else:
+        for entry in track_item_iter(number):
+            print('\t'.join((entry.timestamp.isoformat(), entry.place, entry.info)))
 
 
 def track_item(number):
-	return list(track_item_iter(number))
+    return list(track_item_iter(number))
 
 
 def track_item_iter(number):
-	session = requests.session()
-	resp = session.get('http://posta.hu/ugyfelszolgalat/nyomkovetes')
-	tree = etree.fromstring(resp.content, HTML_PARSER)
-	(form,) = tree.xpath('//form[@name="nyomkoveto"]')
+    session = requests.session()
+    resp = session.get('http://posta.hu/ugyfelszolgalat/nyomkovetes')
+    tree = etree.fromstring(resp.content, HTML_PARSER)
+    (form,) = tree.xpath('//form[@name="nyomkoveto"]')
 
-	data = {a['name']: a.get('value', '') for a in
-			imap(attrgetter('attrib'), form.xpath('.//input'))}
+    data = {a['name']: a.get('value', '') for a in
+            imap(attrgetter('attrib'), form.xpath('.//input'))}
 
-	for row in STATIC_VALUES.split('\n'):
-		key, value = row.strip().split(':', 1)
-		data[key] = value
+    for row in STATIC_VALUES.split('\n'):
+        key, value = row.strip().split(':', 1)
+        data[key] = value
 
-	data['nyomkoveto:documentnumber:input'] = number
+    data['nyomkoveto:documentnumber:input'] = number
 
-	resp = session.post(urljoin(resp.url, form.attrib['action']),
-			data=data, headers={'Referer': resp.url})
-	tree = etree.fromstring(resp.content, HTML_PARSER)
+    resp = session.post(urljoin(resp.url, form.attrib['action']),
+            data=data, headers={'Referer': resp.url})
+    tree = etree.fromstring(resp.content, HTML_PARSER)
 
-	for row in tree.xpath('//table')[0].xpath('tbody/tr'):
-		timestamp = datetime.strptime(''.join(ifilter(None, imap(unicode.strip, imap(unicode,
-			row.xpath('td[@class="date"]//text()'))))), '%Y.%m.%d%H:%M')
-		(place_td,) = row.xpath('td[@class="place"]')
-		(place,) = place_td.xpath('span/text()') or ['N/A']
-		info = ''.join(ifilter(None, imap(unicode.strip, imap(unicode, place_td.xpath('p//text()')))))
-		yield TRACK_ENTRY(timestamp=timestamp, place=place, info=info)
+    for row in tree.xpath('//table')[0].xpath('tbody/tr'):
+        timestamp = datetime.strptime(''.join(ifilter(None, imap(unicode.strip, imap(unicode,
+            row.xpath('td[@class="date"]//text()'))))), '%Y.%m.%d%H:%M')
+        (place_td,) = row.xpath('td[@class="place"]')
+        (place,) = place_td.xpath('span/text()') or ['N/A']
+        info = ''.join(ifilter(None, imap(unicode.strip, imap(unicode, place_td.xpath('p//text()')))))
+        yield TRACK_ENTRY(timestamp=timestamp, place=place, info=info)
 
 
 if __name__ == '__main__':
-	main()
+    main()
